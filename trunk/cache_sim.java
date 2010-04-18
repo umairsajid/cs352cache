@@ -33,8 +33,8 @@ class cache_sim {
 	 */
 	public set_block(int datablocks, int numEntries){
 	    entries = new cache_entry[datablocks];
-	    for(i = 0; i < datablocks; i++){
-		entries[i] = new cache_entry(
+	    for(i = 0; i < numEntries; i++){
+		entries[i] = new cache_entry(datablocks, '000000', new int[datablocks]);
 	    }
 	}
     }
