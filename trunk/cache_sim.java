@@ -17,7 +17,7 @@ class cache_sim {
 	    valid = true;
 	    data = new int[numblocks];
 	    for(i = 0; i < data.size(); i++){
-		data[i] = blocks[i]
+		data[i] = blocks[i];
 	    }
 	}
 	
@@ -30,18 +30,27 @@ class cache_sim {
 	//Constructor creates a full, empty set
 	/*
 	 *  @param datablocks the amount of blocks per cache entry
+	 *  @param numEntries the number of entries in the set
 	 */
 	public set_block(int datablocks, int numEntries){
 	    entries = new cache_entry[datablocks];
 	    for(i = 0; i < numEntries; i++){
-		entries[i] = new cache_entry(datablocks, '000000', new int[datablocks]);
+		entries[i] = new cache_entry(datablocks, '00000000', new int[datablocks]);
 	    }
 	}
     }
 
     //Main memory
-    private class Memory {
-	private 
+    /*
+     *  @param size: the size of memory in Gigabytes
+     */
+    private class memory {
+	private string[] data;
+
+	public memory(int size){
+	    
+	    for 
+	}
     }
     
     
