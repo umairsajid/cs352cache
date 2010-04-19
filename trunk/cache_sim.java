@@ -17,7 +17,7 @@ class cache_sim {
 	public cache_entry(int numblocks, String tag, String[] blocks){
 	    valid = true;
 	    data = new String[numblocks];
-	    for(int i = 0; i < data.size; i++){
+	    for(int i = 0; i < numblocks; i++){
 		data[i] = blocks[i];
 	    }
 	}
@@ -50,10 +50,12 @@ class cache_sim {
 
 	public memory(int size){
 	    data = new String[size];
-	    for( int i=0; i<size; i++){
+	    for(int i=0; i<size; i++){
 		data[i] = Integer.toHexString(i);
 	    }
 	}
+	public setBlock(){}
+	public getBlock(){}
     }
     
     
