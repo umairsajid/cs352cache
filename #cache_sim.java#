@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.lang.*;
 
 class cache_sim {
 
@@ -9,15 +10,15 @@ class cache_sim {
     //A class used to contain cache data
     private class cache_entry {
 	private boolean valid;
-	private string[] data;
-	private string tag;
+	private String[] data;
+	private String tag;
 	
 	//Constructor, uses deep copy on incoming block data
-	public cache_entry(int numblocks, string tag, string[] blocks){
+	public cache_entry(int numblocks, String tag, String[] blocks){
 	    valid = true;
-	    data = new int[numblocks];
-	    for(i = 0; i < data.size(); i++){
-		data[i] = blocks[i]
+	    data = new String[numblocks];
+	    for(int i = 0; i < data.size; i++){
+		data[i] = blocks[i];
 	    }
 	}
 	
@@ -29,20 +30,30 @@ class cache_sim {
 	
 	//Constructor creates a full, empty set
 	/*
-	 *  @param datablocks: the amount of blocks per cache entry
-	 *  @param numEntries: the amount of entries in the set
+	 *  @param datablocks the amount of blocks per cache entry
+	 *  @param numEntries the number of entries in the set
 	 */
 	public set_block(int datablocks, int numEntries){
 	    entries = new cache_entry[datablocks];
-	    for(i = 0; i < entries; i++){
-		entries[i] = new cache_entry(
+	    for(int i = 0; i < numEntries; i++){
+		entries[i] = new cache_entry(datablocks, "00000000", new String[datablocks]);
 	    }
 	}
     }
 
     //Main memory
-    private class Memory {
-	private 
+    /*
+     *  @param size: the size of memory in Megabytes * 1024^2
+     */
+    private class memory {
+	private String[] data;
+
+	public memory(int size){
+	    data = new String[size];
+	    for(int i=0; i<size; i++){
+		data[i] = Integer.toHexString(i);
+	    }
+	}
     }
     
     
