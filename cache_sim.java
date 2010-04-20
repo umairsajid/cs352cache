@@ -66,12 +66,9 @@ class cache_sim {
 	}
 	
 	io readwrite = new io();
-        
-	
-	/*
 	System.out.println("c is " + c.cache_capacity +
 			   ", b is " + c.cache_blocksize + 
-			   ", a is " + c.cache_associativity + "\n");*/
+			   ", a is " + c.cache_associativity + "\n");
     }
 
 
