@@ -10,12 +10,13 @@ class cache_sim {
     //A class used to contain cache data
     private class cache_entry {
 	private boolean valid;
+	private boolean dirty;
 	private String[] data;
 	private String tag;
 	
 	//Constructor, uses deep copy on incoming block data
 	public cache_entry(int numblocks, String tag, String[] blocks){
-	    valid = true;
+	    valid = false;
 	    data = new String[numblocks];
 	    for(int i = 0; i < numblocks; i++){
 		data[i] = blocks[i];
@@ -27,6 +28,7 @@ class cache_sim {
     //A container class for cache data
     private class set_block {
 	private cache_entry[] entries;
+	private ArrayList<String> LRUcontainter;
 	
 	//Constructor creates a full, empty set
 	/*
@@ -35,10 +37,16 @@ class cache_sim {
 	 */
 	public set_block(int datablocks, int numEntries){
 	    entries = new cache_entry[datablocks];
+	    LRUcontainer = new ArrayList<String>(); //our LRU "queue"
+
 	    for(int i = 0; i < numEntries; i++){
 		entries[i] = new cache_entry(datablocks, "00000000", new String[datablocks]);
 	    }
+
+	    
 	}
+
+	
     }
 
     //Main memory
@@ -54,8 +62,12 @@ class cache_sim {
 		data[i] = Integer.toHexString(i);
 	    }
 	}
-	public setBlock(){}
-	public getBlock(){}
+	public setBlock(){
+	
+	}
+	public getBlock(){
+	
+	}
     }
     
     
@@ -66,9 +78,12 @@ class cache_sim {
 	}
 	
 	io readwrite = new io();
+        
+	
+	/*
 	System.out.println("c is " + c.cache_capacity +
 			   ", b is " + c.cache_blocksize + 
-			   ", a is " + c.cache_associativity + "\n");
+			   ", a is " + c.cache_associativity + "\n");*/
     }
 
 
