@@ -18,13 +18,38 @@ class cache_sim {
 	private String[] data;
 	private String tag;
 	
-	//Constructor, uses deep copy on incoming block data
-	public cache_entry(int numblocks, String tag, String[] blocks){
-	    valid = false;
+	/*
+	 * Constructor, uses deep copy on incoming block data
+	 * @param numblocks, the number of blocks this entry is expecting
+	 * @param tag,       the tag for this entry
+	 * @param blocks,    the datablock for this entry
+	 * @param isValid,   is this a valid entry
+	 */
+	public cache_entry(int numblocks, String tag, String[] blocks, boolean isValid){
+	    valid = isValid;
+	    dirty = false;
 	    data = new String[numblocks];
 	    for(int i = 0; i < numblocks; i++){
 		data[i] = blocks[i];
 	    }
+	}
+
+	//Update method to just change the data associated with it, sets the dirty bit
+	public void updateEntry(String[] blocks){
+	    for(int i = 0; i < this.data.length; i++){
+		data[i] = blocks[i];
+	    }
+	    this.dirty = true;
+	}
+
+	//Simple helper method, returns whether this is a valid entry
+	public boolean isValid(){
+	    return this.valid;
+	}
+	
+	//Get the tag for this entry
+	public String getTag(){
+	    return this.tag;
 	}
 	
     }
@@ -32,23 +57,98 @@ class cache_sim {
     //A container class for cache data
     private static class set_block {
 	private cache_entry[] entries;
-	private ArrayList<String> LRUcontainter;
+	private ArrayList<String> LRUcontainer;  //we store the whole address of the entry here 
+	private int blocks;                       //The number of blocks that we hold in each entry
+	private int tagSize;                      //The size of our tags
 	
-	//Constructor creates a full, empty set
 	/*
+	 *  Constructor: creates a full, empty set
 	 *  @param datablocks the amount of blocks per cache entry
 	 *  @param numEntries the number of entries in the set
 	 */
 	public set_block(int datablocks, int numEntries){
-	    entries = new cache_entry[datablocks];
-	    ArrayList<Integer> LRUcontainer = new ArrayList<Integer>(); //our LRU "queue"
-
+	    entries = new cache_entry[numEntries];
+	    ArrayList<Integer> LRUcontainer = new ArrayList<Integer>(); //our LRU queue
+	    blocks = datablocks;
 	    for(int i = 0; i < numEntries; i++){
-		entries[i] = new cache_entry(datablocks, "00000000", new String[datablocks]);
+		entries[i] = new cache_entry(datablocks, "00000000", new String[datablocks], false);
 	    }
+	}
 
+	/*
+	 *  Write an entry to this set. If it already exists, update it and set to dirty
+	 *  @param address, the memory location we're writing
+	 *  @param data, the block of data passed in from 
+	 */
+	public void writeEntry(String address, String[] data){
+	    //Check to see if we're holding onto this address in this set
+	    int addressIdx = this.LRUcontainer.indexOf(address);
+	    if(addressIdx != -1){ //Address in cache
+		this.LRUcontainer.remove(addressIdx);  //So move it to the end
+		this.LRUcontainer.add(address);
+
+		String curTag = address.substring(0, this.tagSize + 1);
+		int selectIdx = findEntry(curTag);
+		cache_entry current = this.entries[selectIdx];
+		current.updateEntry(data);
+
+	    } else {
+		this.LRUcontainer.add(address);
+		cache_entry newEntry = new cache_entry(this.blocks, address.substring(0, this.tagSize + 1), data, true);
+	    
+		//Now find somewhere to put this block in the cache
+		int emptyIdx = findEmptyIndex();
+		//TODO: this code needs to be turned into a method, since an evict also writes back to memory if the bit is dirty
+		if( emptyIdx == -1){        //No vacancy, we have to evict somebody
+		    //Check LRU
+		    String oldest = this.LRUcontainer.get(0);  
+		    //Now that we have an address we search through our entries, to find a match
+		    String tag = oldest.substring(0, this.tagSize + 1);        //This is the tag we're looking for
+		    int entryIdx = findEntry(tag);
+		    this.entries[entryIdx] = newEntry;		
+		}
+		//END TODO:
+
+	    }
 	    
 	}
+
+	/*
+	 * Read an entry from this set, returns an invalid block if the read fails
+	 * @param address, the memory location we're looking for
+	 */
+	public cache_entry readEntry(String address){
+	    String tag = address.substring(0, this.tagSize + 1);
+	    int entryIdx = findEntry(tag);
+	    if( entryIdx == -1){
+		return new cache_entry(this.blocks, tag, new String[this.blocks], false);
+	    } else {
+		return this.entries[entryIdx];
+	    }
+	}
+
+	// Simple helper method to find an empty block in this set
+	private int findEmptyIndex(){
+	    for( int i = 0; i < entries.length; i++){
+		cache_entry current = entries[i];
+		if( current.isValid() ){
+		    return i;
+		}
+	    }
+	    return -1;
+	}
+
+	// Helper to find an entry by tag
+	private int findEntry(String tag){
+	    for( int i = 0; i < entries.length; i++){
+		cache_entry current = entries[i];
+		if( current.getTag().equals(tag)){
+		    return i;
+		}
+	    }
+	    return -1;
+	}
+	
 
 	
     }
