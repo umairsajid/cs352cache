@@ -70,7 +70,7 @@ class cache_sim {
 	 *  @param datablocks the amount of blocks per cache entry
 	 *  @param numEntries the number of entries in the set
 	 */
-	public set_block(int datablocks, int numEntries){
+	public set_block(int datablocks, int numEntries, int boffset, int tagsize){
 	    entries = new cache_entry[numEntries];
 	    LRUcontainer = new ArrayList<Integer>(); //our LRU queue
 	    blocks = datablocks;
@@ -89,7 +89,7 @@ class cache_sim {
 	    int addressIdx = this.LRUcontainer.indexOf(address); // Return the index location of the address
 	    String tempAddress = int_to_hex(address);
 
-	    if(addressIdx != -1){ //Address is in cache
+	    if(addressIdx != -1){ //Address is in cache A.K.A Hit
 		//So move it to the end, because it's most recently use
 		this.LRUcontainer.remove(addressIdx);  		
 		this.LRUcontainer.add(address);
@@ -99,7 +99,7 @@ class cache_sim {
 		cache_entry current = this.entries[selectIdx];
 		current.updateEntry(data);
 
-	    } else { //Address isn't in cache
+	    } else { //Address isn't in cache, A.K.A. Miss
 		cache_entry newEntry = new cache_entry(this.blocks, tempAddress.substring(0, this.tagSize + 1), data, true);		
 		int emptyIdx = findEmptyIndex(); //Now find somewhere to put this block in the cache
 		
@@ -160,17 +160,53 @@ class cache_sim {
     
     private static class cache {
 	private set_block[] sets;
+	private int blocksize;
 	
 	public cache(int capacity, int blocksize, int associativity){
 	    //Capacity comes in as kilobytes so multiply by (1024/16) or 64 to get the capacity in blocks
 	    capacity *= 64;
 	    int numofentries = capacity / blocksize;
+	    this.blocksize = blocksize;
 	    numofentries /= associativity;
 	    sets = new set_block[associativity];
+	    m = Math.log(blocksize) / Math.log(2);
+	    tagsize = 32 - (m + numofentries + 2);
 	    for( int i = 0; i < associativity; i++){
-		sets[i] = new set_block(blocksize, numofentries);
+		sets[i] = new set_block(blocksize, numofentries, m, tagsize);
 	    }
+	}
+	/*
+	 * This method attempts to write to cache, if we find that entry we write to it
+	 * otherwise we just create a new entry, either way the dirty bit will be set
+	 * @param address: the location that this entry will represent
+	 * @param value  : the value to be written to cache
+	 */
+	public void cacheWrite(String address, String value, memory mem){
+	    int intAddress = hex_to_int(address);
+	    //Which set do we access?
+	    int setLocation = intAddress % sets.length;
+	    set_block currentSet = sets[setLocation];
+	    //Create a block of memory to pass to writeEntry
+	    String[] memBlock = makeBlock(address, mem);
+	    currentSet.writeEntry(hex_to_int(address), memBlock);
+	}
 
+	/*
+	 * This method is used to construct a datablock from memory
+	 * @param startAddr: the location that we start building from
+	 * @param mem      : the memory object that we will be reading from
+	 */
+	public String[] makeBlock(String startAddr, memory mem){
+	    
+	}
+
+	/*
+	 * This method is used to read from the cache, if the cache misses read from memory
+	 * @param address: the address that we're trying to find in cache
+	 * @param mem    : the memory object that we will be reading from
+	 */
+	public String cacheRead(String address, memory mem){
+	    
 	}
     }
 
