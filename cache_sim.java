@@ -43,6 +43,11 @@ class cache_sim {
 	    makeDirty();
 	}
 
+	//Helper method for writing back an entry if it is dirty
+	public void write2file(int address, memory mem){
+	    //TODO: write this
+	}
+
 	//Simple helper method, returns whether this is a valid entry
 	public boolean isValid(){
 	    return this.valid;
@@ -61,13 +66,17 @@ class cache_sim {
 	    return -1;
 	}	
 	
+	public boolean isDirty() {
+	    return this.dirty;
+	}
+	
     }
 
     //A container class for cache data
     private static class set_block {
 	private cache_entry[] entries;
 	private ArrayList<Integer> LRUcontainer;  //we store the whole address of the entry here 
-	private int blocks;                       //The number of blocks that we hold in each entry
+	private int blocks;                       //The number of words
 	private int tagSize;                      //The size of our tags
 	private int boffset;
 	private int index;
@@ -93,7 +102,7 @@ class cache_sim {
 	 *  @param address, the memory location we're writing
 	 *  @param data, the block of data passed in from 
 	 */
-	public void writeEntry(int address, String[] data){ 
+	public void writeEntry(int address, String[] data, memory mem){ 
 	    //Check to see if we're holding onto this address in this set
 	    int addressIdx = this.LRUcontainer.indexOf(address); // Return the index location of the address
 	    String tempAddress = int_to_hex(address);
@@ -112,12 +121,16 @@ class cache_sim {
 		cache_entry newEntry = new cache_entry(this.blocks, tempAddress.substring(0, this.tagSize + 1), data, true);		
 		int emptyIdx = findEmptyIndex(); //Now find somewhere to put this block in the cache
 		
-		if(emptyIdx == -1) evict(LRUcontainer.get(0), newEntry, tempAddress);     //No vacancy, we have to evict somebody		    
+		if(emptyIdx == -1) evict(LRUcontainer.get(0), newEntry, tempAddress, mem);     //No vacancy, we have to evict somebody		    
 	    }
 	    
 	}
 	//TODO: an evict also writes back to memory if the bit is dirty
-	public void evict(int idx, cache_entry entry, String address){
+	public void evict(int idx, cache_entry entry, String address, memory mem){
+	    //Before we remove lets check to see if this entry is dirty and if so, write back to memory
+	    if (entry.isDirty()){
+		
+	    }
 	    LRUcontainer.remove(0);
 	    LRUcontainer.add(cache_sim.hex_to_int(address));
 	    String oldest = cache_sim.int_to_hex(idx);
@@ -131,7 +144,7 @@ class cache_sim {
 	 * Read an entry from this set, returns an invalid block if the read fails
 	 * @param address, the memory location we're looking for
 	 */
-	public cache_entry readEntry(String address){
+	public cache_entry readEntry(String address, memory mem){
 	    String tag = address.substring(0, this.tagSize + 1);
 	    int entryIdx = findEntry(address);
 	    if( entryIdx == -1){
@@ -154,8 +167,8 @@ class cache_sim {
 
 	// Helper to find an entry by tag
 	private int findEntry(String address){
-	    String tag = substring(0,this.tagSize + 1);
-	    String offset = substring(this.tagSize + this.index, 31); // 31-32 is the two byte offset
+	    String tag = address.substring(0,this.tagSize + 1);
+	    String offset = address.substring(this.tagSize + this.index, 31); // 31-32 is the two byte offset
 
 	    for( int i = 0; i < entries.length; i++){
 		cache_entry current = entries[i];
@@ -177,15 +190,15 @@ class cache_sim {
 	
 	public cache(int capacity, int blocksize, int associativity){
 	    //Capacity comes in as kilobytes so multiply by (1024/16) or 64 to get the capacity in blocks
-	    capacity *= 64;
+	    capacity *= 1024; //Capacity now in bytes
 	    int numofentries = capacity / blocksize;
-	    this.blocksize = blocksize;
+	    this.blocksize = blocksize/2;
 	    numofentries /= associativity;
 	    sets = new set_block[associativity];
-	    m = Math.log(blocksize) / Math.log(2);
-	    tagsize = 32 - (m + numofentries + 2);
+	    double m = Math.log(blocksize) / Math.log(2);
+	    int tagsize = 32 - ((int)m + numofentries + 2);
 	    for( int i = 0; i < associativity; i++){
-		sets[i] = new set_block(blocksize, numofentries, m, tagsize, associativity);
+		sets[i] = new set_block(blocksize/2, numofentries, (int)m, tagsize, associativity);
 	    }
 	}
 	/*
@@ -199,9 +212,10 @@ class cache_sim {
 	    //Which set do we access?
 	    int setLocation = intAddress % sets.length;
 	    set_block currentSet = sets[setLocation];
-	    //Create a block of memory to pass to writeEntry
+	    //Create a block of memory to pass to writeEntry, updating the newBlock
 	    String[] memBlock = makeBlock(address, mem);
-	    currentSet.writeEntry(hex_to_int(address), memBlock);
+	    memBlock[0] = value;
+	    currentSet.writeEntry(hex_to_int(address), memBlock, mem);
 	}
 
 	/*
@@ -210,7 +224,7 @@ class cache_sim {
 	 * @param mem      : the memory object that we will be reading from
 	 */
 	public String[] makeBlock(String startAddr, memory mem){
-	    
+	    return null;
 	}
 
 	/*
@@ -219,7 +233,7 @@ class cache_sim {
 	 * @param mem    : the memory object that we will be reading from
 	 */
 	public String cacheRead(String address, memory mem){
-	    
+	    return null;
 	}
     }
 
@@ -258,7 +272,7 @@ class cache_sim {
         int address;
         int data; 
 
-	memory mem = new memory(8192000); 
+	memory mem = new memory(16777216); 
  
 	// Initialize Cache
 	cache cachemem = new cache(c.cache_capacity, c.cache_blocksize, c.cache_associativity);
