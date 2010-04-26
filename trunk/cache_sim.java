@@ -39,7 +39,7 @@ class cache_sim {
 	    for(int i = 0; i < this.data.length; i++){
 		data[i] = blocks[i];
 	    }
-	    this.dirty = true;
+	    makeDirty();
 	}
 
 	//Simple helper method, returns whether this is a valid entry
@@ -51,13 +51,17 @@ class cache_sim {
 	public String getTag(){
 	    return this.tag;
 	}
+
+	public void makeDirty() {
+	    this.dirty = true;
+	}
 	
     }
 
     //A container class for cache data
     private static class set_block {
 	private cache_entry[] entries;
-	private ArrayList<String> LRUcontainer;  //we store the whole address of the entry here 
+	private ArrayList<Integer> LRUcontainer;  //we store the whole address of the entry here 
 	private int blocks;                       //The number of blocks that we hold in each entry
 	private int tagSize;                      //The size of our tags
 	
@@ -68,7 +72,7 @@ class cache_sim {
 	 */
 	public set_block(int datablocks, int numEntries){
 	    entries = new cache_entry[numEntries];
-	    ArrayList<Integer> LRUcontainer = new ArrayList<Integer>(); //our LRU queue
+	    LRUcontainer = new ArrayList<Integer>(); //our LRU queue
 	    blocks = datablocks;
 	    for(int i = 0; i < numEntries; i++){
 		entries[i] = new cache_entry(datablocks, "00000000", new String[datablocks], false);
@@ -80,37 +84,38 @@ class cache_sim {
 	 *  @param address, the memory location we're writing
 	 *  @param data, the block of data passed in from 
 	 */
-	public void writeEntry(String address, String[] data){
+	public void writeEntry(int address, String[] data){ 
 	    //Check to see if we're holding onto this address in this set
-	    int addressIdx = this.LRUcontainer.indexOf(address);
-	    if(addressIdx != -1){ //Address in cache
-		this.LRUcontainer.remove(addressIdx);  //So move it to the end
-		this.LRUcontainer.add(address);
+	    int addressIdx = this.LRUcontainer.indexOf(address); // Return the index location of the address
+	    String tempAddress = int_to_hex(address);
 
-		String curTag = address.substring(0, this.tagSize + 1);
+	    if(addressIdx != -1){ //Address is in cache
+		//So move it to the end, because it's most recently use
+		this.LRUcontainer.remove(addressIdx);  		
+		this.LRUcontainer.add(address);
+		
+		String curTag = tempAddress.substring(0, this.tagSize + 1);
 		int selectIdx = findEntry(curTag);
 		cache_entry current = this.entries[selectIdx];
 		current.updateEntry(data);
 
-	    } else {
-		this.LRUcontainer.add(address);
-		cache_entry newEntry = new cache_entry(this.blocks, address.substring(0, this.tagSize + 1), data, true);
-	    
-		//Now find somewhere to put this block in the cache
-		int emptyIdx = findEmptyIndex();
-		//TODO: this code needs to be turned into a method, since an evict also writes back to memory if the bit is dirty
-		if( emptyIdx == -1){        //No vacancy, we have to evict somebody
-		    //Check LRU
-		    String oldest = this.LRUcontainer.get(0);  
-		    //Now that we have an address we search through our entries, to find a match
-		    String tag = oldest.substring(0, this.tagSize + 1);        //This is the tag we're looking for
-		    int entryIdx = findEntry(tag);
-		    this.entries[entryIdx] = newEntry;		
-		}
-		//END TODO:
-
+	    } else { //Address isn't in cache
+		cache_entry newEntry = new cache_entry(this.blocks, tempAddress.substring(0, this.tagSize + 1), data, true);		
+		int emptyIdx = findEmptyIndex(); //Now find somewhere to put this block in the cache
+		
+		if(emptyIdx == -1) evict(LRUcontainer.get(0), newEntry, tempAddress);     //No vacancy, we have to evict somebody		    
 	    }
 	    
+	}
+	//TODO: an evict also writes back to memory if the bit is dirty
+	public void evict(int idx, cache_entry entry, String address){
+	    LRUcontainer.remove(0);
+	    LRUcontainer.add(cache_sim.hex_to_int(address));
+	    String oldest = cache_sim.int_to_hex(idx);
+	    //Now that we have an address we search through our entries, to find a match
+	    String tag = oldest.substring(0, this.tagSize + 1);
+	    int entryIdx = findEntry(tag);
+	    this.entries[entryIdx] = entry; //Put the entry into the location that we just evicted
 	}
 
 	/*
