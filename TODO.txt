@@ -1,0 +1,16 @@
+Create .toStrings() for cache, memory
+
+cache_entry needs:
+getBlock() gets a block from an entry given an address and tagsize, offsetsize, indexsize
+write2file() writes an entry back to file given the address of that tag (might need to be reconstructed from the entry
+
+
+set_block needs:
+to read from memory on a cache miss (readEntry method)
+
+
+cache needs:
+makeBlock, cacheRead need to be finished, specification for either can be found in the comments
+
+directMappedClass:
+a class to do directMapped caches, if associativity is 1
