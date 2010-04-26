@@ -35,6 +35,7 @@ class cache_sim {
 	}
 
 	//Update method to just change the data associated with it, sets the dirty bit
+	//TODO: smarter update entry for blocks within blocks
 	public void updateEntry(String[] blocks){
 	    for(int i = 0; i < this.data.length; i++){
 		data[i] = blocks[i];
@@ -55,6 +56,10 @@ class cache_sim {
 	public void makeDirty() {
 	    this.dirty = true;
 	}
+	//TODO: this method
+	private int getInnerBlock(String address) {
+	    return -1;
+	}	
 	
     }
 
@@ -64,13 +69,17 @@ class cache_sim {
 	private ArrayList<Integer> LRUcontainer;  //we store the whole address of the entry here 
 	private int blocks;                       //The number of blocks that we hold in each entry
 	private int tagSize;                      //The size of our tags
-	
+	private int boffset;
+	private int index;
 	/*
 	 *  Constructor: creates a full, empty set
 	 *  @param datablocks the amount of blocks per cache entry
 	 *  @param numEntries the number of entries in the set
 	 */
-	public set_block(int datablocks, int numEntries, int boffset, int tagsize){
+	public set_block(int datablocks, int numEntries, int boffset, int tagsize, int index){
+	    tagSize = tagsize;
+	    boffset = boffset;
+	    index = index;
 	    entries = new cache_entry[numEntries];
 	    LRUcontainer = new ArrayList<Integer>(); //our LRU queue
 	    blocks = datablocks;
@@ -95,7 +104,7 @@ class cache_sim {
 		this.LRUcontainer.add(address);
 		
 		String curTag = tempAddress.substring(0, this.tagSize + 1);
-		int selectIdx = findEntry(curTag);
+		int selectIdx = findEntry(tempAddress);
 		cache_entry current = this.entries[selectIdx];
 		current.updateEntry(data);
 
@@ -114,7 +123,7 @@ class cache_sim {
 	    String oldest = cache_sim.int_to_hex(idx);
 	    //Now that we have an address we search through our entries, to find a match
 	    String tag = oldest.substring(0, this.tagSize + 1);
-	    int entryIdx = findEntry(tag);
+	    int entryIdx = findEntry(address);
 	    this.entries[entryIdx] = entry; //Put the entry into the location that we just evicted
 	}
 
@@ -124,7 +133,7 @@ class cache_sim {
 	 */
 	public cache_entry readEntry(String address){
 	    String tag = address.substring(0, this.tagSize + 1);
-	    int entryIdx = findEntry(tag);
+	    int entryIdx = findEntry(address);
 	    if( entryIdx == -1){
 		return new cache_entry(this.blocks, tag, new String[this.blocks], false);
 	    } else {
@@ -144,7 +153,10 @@ class cache_sim {
 	}
 
 	// Helper to find an entry by tag
-	private int findEntry(String tag){
+	private int findEntry(String address){
+	    String tag = substring(0,this.tagSize + 1);
+	    String offset = substring(this.tagSize + this.index, 31); // 31-32 is the two byte offset
+
 	    for( int i = 0; i < entries.length; i++){
 		cache_entry current = entries[i];
 		if( current.getTag().equals(tag)){
@@ -153,6 +165,7 @@ class cache_sim {
 	    }
 	    return -1;
 	}
+
 	
 
 	
@@ -172,7 +185,7 @@ class cache_sim {
 	    m = Math.log(blocksize) / Math.log(2);
 	    tagsize = 32 - (m + numofentries + 2);
 	    for( int i = 0; i < associativity; i++){
-		sets[i] = new set_block(blocksize, numofentries, m, tagsize);
+		sets[i] = new set_block(blocksize, numofentries, m, tagsize, associativity);
 	    }
 	}
 	/*
