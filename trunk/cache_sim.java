@@ -187,6 +187,7 @@ class cache_sim {
     private static class cache {
 	private set_block[] sets;
 	private int blocksize;
+	private int miss_total, miss_reads, miss_writes, missrate_total, missrate_reads, missrate_writes, num_evicted;
 	
 	public cache(int capacity, int blocksize, int associativity){
 	    //Capacity comes in as kilobytes so multiply by (1024/16) or 64 to get the capacity in blocks
@@ -235,6 +236,23 @@ class cache_sim {
 	public String cacheRead(String address, memory mem){
 	    return null;
 	}
+
+	public String toString(){
+	    String result = "";
+
+	    result += "STATISTICS\n";
+	    result += "Misses:\n";
+	    result += "Total: " + miss_total + " DataReads: " + miss_reads + " DataWrites: " + miss_writes + "\n";
+	    result += "Miss rate:\n";
+	    result += "Total: " + missrate_total + " DataReads: " + missrate_reads + " DataWrites: " + missrate_writes + "\n";
+	    result += "Number of Dirty Blocks Evicted from the Cache: " + num_evicted + "\n\n";
+	    
+	    result += "CACHE CONTENTS\n";
+	    result += "Set\tV  Tag          D  Words";
+
+	 
+	    return result;
+	}
     }
 
     //Main memory
@@ -243,7 +261,7 @@ class cache_sim {
      */
     private static class memory {
 	private int[] data;
-
+	
 	public memory(int size){
 	    data = new int[size];
 	    for(int i=0; i<size; i++){
@@ -257,6 +275,23 @@ class cache_sim {
 
 	public int getBlock(int address){
 	    return data[address];
+	}
+	
+	public String toString(){
+	    String result = "";
+	    result += "MAIN MEMORY:\n";
+	    result += "Address  Words\n";
+	    
+	    int start = cache_sim.hex_to_int("003f7e00");
+       
+	    for(int i=0; i < 10; i++){
+		result += int_to_hex(start + i*8);
+		for(int j=0; j < 8; j++){
+		    result += "  " +int_to_hex(getBlock(start + i*8 + j));
+		}
+		result += "\n";
+	    }
+	    return result;
 	}
     }
     
@@ -315,9 +350,11 @@ class cache_sim {
 		
 		//output the new contents
 	    } 
-	    System.out.println("memory[" + address + "] = " + mem.getBlock(address));        
-	
+	    //System.out.println("memory[" + address + "] = " + mem.getBlock(address));        
+	    
 	}
+	
+	System.out.println(cachemem);
     }
 
     public boolean parseParams(String[] args)
