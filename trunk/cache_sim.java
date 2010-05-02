@@ -271,10 +271,10 @@ class cache_sim {
 	    //Create a block of memory to pass to writeEntry
 	    String[] memBlock = makeBlock(binaryAddr);
 	    //update it with the new value
-	    int address = binary_to_int(binaryAdd);
-	    memBlock[address % this.blocksize] = value;
+	    int memAddr = binary_to_int(binaryAddr);
+	    memBlock[memAddr % this.blocksize] = value;
 	    //Update address so it points to the start of the block
-	    binaryAddr = binary_to_int(address - (address % this.blocksize));
+	    binaryAddr = int_to_binary(memAddr - (memAddr % this.blocksize));
 	    //Write it to the cache and update the miss ratio
 	    int hitormiss = currentSet.writeEntry(binaryAddr, memBlock, this.sysMem);
 	    this.miss_writes += hitormiss;
@@ -294,7 +294,7 @@ class cache_sim {
 	    
 	    String[] dataBlock = new String[this.blocksize];
 	    for(int i = 0; i < this.blocksize; i++){
-		dataBlock[i] = this.sysMem.getBlock( start + i );
+		dataBlock[i] = int_to_hex(this.sysMem.getBlock( start + i ));
 	    }
 	    return dataBlock;
 	}
@@ -319,12 +319,13 @@ class cache_sim {
 		//Change the offset of the block so it fits our block alignment
 		int startAddr = hex_to_int(address);
 		int startOffset = startAddr % this.blocksize;
+		//offsetBin is our offset binary address
 		String offsetBin = int_to_binary(startAddr - startOffset);
-		String[] memBlock = makeBlock(startAddr);
+		String[] memBlock = makeBlock(offsetBin);
 		attempt = currentSet.insertEntry(binaryAddr, memBlock, this.sysMem);
 	    }
 	    //Get the block offset bits and convert to an int
-	    int boffset = binary_to_int( binaryaddr.substring(this.tagsize + (int)n + (int)m, 30));
+	    int boffset = binary_to_int( binaryAddr.substring(this.tagsize + (int)n + (int)m, 30));
             return attempt.getWord(boffset);	    
 	}
 
@@ -375,7 +376,7 @@ class cache_sim {
      *  @param size: the size of memory in Megabytes * 1024^2
      */
     private static class memory {
-	private String[] data;
+	private int[] data;
 
 	public memory(int size){
 	    data = new int[size];
@@ -385,7 +386,7 @@ class cache_sim {
 	}
 
 	public void setBlock(int address, String value){
-	    data[address] = value;
+	    data[address] = hex_to_int(value);
 	}
 
 	public int getBlock(int address){
@@ -441,7 +442,6 @@ class cache_sim {
 	    }
 
 	    strings = parseString.split("\\s");
-
 	    if(strings.length < 2) {
 		break;
 	    }
@@ -451,12 +451,11 @@ class cache_sim {
 
 	    // check again if we have reached the end
 	    // as this flag is set only after a 'cin'
-	    //	    if(feof(stdin)) return 1;
+	    //if(feof(stdin)) return 1;
 
 
 	    // Read the address (as a hex number)
 	    //address = hex_to_int(strings[1]);
-
 	    //if it is a cache write the we have to read the data
 	    if(read_write == CACHE_WRITE) {
 		//data = hex_to_int(strings[2]);
@@ -572,6 +571,12 @@ class cache_sim {
 	
 	return hex_string;
     }
+
+    public static String int_to_binary(int input_integer) {
+	String temp = int_to_hex(input_integer);
+	return hex_to_binary(temp);
+    }
+
 
     public static String extractTag(String hex, int tagsize){
 	String binary = hex_to_binary(hex);
