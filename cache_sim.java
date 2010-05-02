@@ -174,11 +174,13 @@ class cache_sim {
 	    cache_entry evicted = this.entries[oldIdx];
 	    if (evicted.isDirty()){
 		//Write back to memory
-		evicted.write2file(toevict, mem);
+		//convert the binary string address to an integer value
+		int intAddr = binary_to_int(toevict);
+		evicted.write2file(intAddr, mem);
 	    }
 	    LRUcontainer.remove(0);
 	    //Add the new address to our LRU container
-	    LRUcontainer.add(adress); 
+	    LRUcontainer.add(address); 
 	    //Put the entry into the location that we just evicted
 	    this.entries[oldIdx] = entry;                    
 	}
@@ -253,7 +255,6 @@ class cache_sim {
 	    //Finally initialize just missed reads and writes, the rest can be instantiated when we run toString
 	    this.miss_reads = 0;
 	    this.miss_writes = 0;
-	    this.transactions = 0;
 	}
 	/*
 	 * This method attempts to write to cache, if we find that entry we write to it
