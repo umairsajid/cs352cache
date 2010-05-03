@@ -156,6 +156,7 @@ class cache_sim {
 		current.updateEntry(data, address);
 
 	    } else { //Address isn't in cache, A.K.A. Miss
+		miss = 1;
 		String newTag = address.substring(0, this.tagSize + 1);
 		int intAddress = binary_to_int(address);
 		cache_entry newEntry = new cache_entry(this.blocks, newTag, intAddress, data, true);
@@ -166,7 +167,7 @@ class cache_sim {
 		if(emptyIdx == -1){ evict(LRUcontainer.get(0), newEntry, address, mem);
 		  //Otherwise set the new entry into the empty Index
 		} else { this.entries[emptyIdx] = newEntry;}
-		miss = 1;}
+	    }
 
 	    return miss;
 	}
