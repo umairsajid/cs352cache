@@ -40,10 +40,8 @@ class cache_sim {
 
 	//Update method to just change the data associated with it, sets the dirty bit
 	//TODO: handle the offset address with same tag problem.
-	public void updateEntry(String[] blocks, String address){
-	    for(int i = 0; i < this.data.length; i++){
-		data[i] = blocks[i];
-	    }
+	public void updateEntry(String[] blocks, int boffset){
+	    this.data[boffset] = blocks[boffset];
 	    makeDirty();
 	}
 
@@ -110,19 +108,20 @@ class cache_sim {
 	private int tagSize;                      //The size of our tags
 	private int boffset;                      //block offset size
 	private int index;                        //The number of index bits
-
+	private cache parent;                     //The cache object that points to this set
 	/*
 	 *  Constructor: creates a full, empty set
 	 *  @param datablocks the amount of blocks per cache entry
 	 *  @param numEntries the number of entries in the set
 	 */
-	public set_block(int datablocks, int numEntries, int boffset, int tagsize, int index){
+	public set_block(int datablocks, int numEntries, int boffset, int index, int tagsize, cache cachemem){
 	    this.tagSize = tagsize;
 	    this.boffset = boffset;
 	    this.index = index;
 	    this.entries = new cache_entry[numEntries];
 	    this.LRUcontainer = new ArrayList<String>(); //our LRU queue, holds binary addresses
 	    this.blocks = datablocks;
+	    this.parent = cachemem;
 	    for(int i = 0; i < numEntries; i++){
 		String array[] = new String[datablocks];
 		for(int x = 0; x < datablocks; x++){
@@ -139,33 +138,42 @@ class cache_sim {
 	 */
 	public int writeEntry(String address, String[] data, memory mem){ 
 	    //Check to see if we're holding onto this address in this set
-	    int addressIdx = this.LRUcontainer.indexOf(address); // Return the index location of the address
+	    int entryIndex = findEntry(address);
+	    System.out.println("Set has this at: " + entryIndex + " for address: " + binary_to_hex(address));
 	    int miss = 0;
-            
+	    //We'll need this in both
+	    String temptag = address.substring(0, this.tagSize);
+	    int addressIdx = this.LRUcontainer.indexOf(temptag);
+	    this.LRUcontainer.add(temptag);
 	    //Address is in cache A.K.A Hit
-	    if(addressIdx != -1){ 
+	    if(entryIndex >= 0){ 
+		System.out.println("Cache Hit!");
 		//So move it to the end, because it is the most recently used
-		this.LRUcontainer.remove(addressIdx);  		
-		this.LRUcontainer.add(address);
-
+		this.LRUcontainer.remove(addressIdx);
 		//Now find it's location
 		int selectIdx = findEntry(address);
 		cache_entry current = this.entries[selectIdx];
 
 		//Update the entry with the new data, we use the address to find the correct offset
-		current.updateEntry(data, address);
+		int boffset = binary_to_int(address.substring(tagSize + index));
+		System.out.println("Current boffset " + boffset + "pulled from " + (tagSize + index));
+		current.updateEntry(data, boffset);
 
-	    } else { //Address isn't in cache, A.K.A. Miss
+	    }
+	    if (addressIdx == -1){
+		//Address isn't in cache, A.K.A. Miss
+		System.out.println("We just missed");
 		miss = 1;
-		String newTag = address.substring(0, this.tagSize + 1);
+		String newTag = address.substring(0, this.tagSize);
 		int intAddress = binary_to_int(address);
 		cache_entry newEntry = new cache_entry(this.blocks, newTag, intAddress, data, true);
+		newEntry.makeDirty();
 		int emptyIdx = findEmptyIndex(); 
 		//Find somewhere to put this block in the cache
 
 		//No vacancy, we have to evict somebody
 		if(emptyIdx == -1){ evict(LRUcontainer.get(0), newEntry, address, mem);
-		  //Otherwise set the new entry into the empty Index
+		    //Otherwise set the new entry into the empty Index
 		} else { this.entries[emptyIdx] = newEntry;}
 	    }
 
@@ -179,11 +187,10 @@ class cache_sim {
 	 *  @param data, the block of data passed in from 
 	 */
 	public cache_entry insertEntry(String address, String[] data, memory mem){
-	    String tag = address.substring(0, this.tagSize + 1);
+	    String tag = address.substring(0, this.tagSize);
 	    int intAddr = binary_to_int(address);
 	    cache_entry newEntry = new cache_entry(this.blocks, tag, intAddr, data, true);		
-	    int emptyIdx = findEmptyIndex(); //Now find somewhere to put this block in the cache
-		
+	    int emptyIdx = this.findEmptyIndex(); //Now find somewhere to put this block in the cache
 	    if(emptyIdx == -1){
 		//No vacancy, we have to evict somebody
 		evict(LRUcontainer.get(0), newEntry, address, mem);     
@@ -195,8 +202,13 @@ class cache_sim {
 	}
 
 	public void evict(String toevict, cache_entry entry, String address, memory mem){
+	    System.out.println("I'm evicting " + toevict  + " right now");
+	    System.out.println(this.LRUcontainer);
+	    for( int i=0; i < entries.length; i++){
+		System.out.println(this.entries[i].getTag());
+	    }
 	    //Before we remove lets check to see if this entry is dirty and if so, write back to memory
-	    int oldIdx = findEntry(toevict);
+	    int oldIdx = findTag(toevict);
 	    cache_entry evicted = this.entries[oldIdx];
 	    if (evicted.isDirty()){
 		//Write back to memory
@@ -205,10 +217,9 @@ class cache_sim {
 		evicted.write2file(intAddr, mem);
 	    }
 	    LRUcontainer.remove(0);
-	    //Add the new address to our LRU container
-	    LRUcontainer.add(address); 
 	    //Put the entry into the location that we just evicted
-	    this.entries[oldIdx] = entry;                    
+	    this.entries[oldIdx] = entry; 
+	    this.parent.updateEvict();
 	}
 
 	/*
@@ -216,18 +227,26 @@ class cache_sim {
 	 * @param address, the memory location we're looking for
 	 */
 	public cache_entry readEntry(String address, memory mem){
+	    String temptag = address.substring(0, this.tagSize);
+	    this.LRUcontainer.add(temptag);
 	    int entryIdx = findEntry(address);
 	    if( entryIdx == -1){ //If we read a miss we return an invalid entry
 		return new cache_entry(this.blocks, "", 0, new String[this.blocks], false);
 	    } else {
+		// Return the index location of the address in our LRU
+	        int addressIdx = this.LRUcontainer.indexOf(temptag);
+		//And remove it as it has been used recently
+		this.LRUcontainer.remove(entryIdx);  		
 		return this.entries[entryIdx];
 	    }
 	}
 
 	// Simple helper method to find an empty block in this set
-	private int findEmptyIndex(){
+	public int findEmptyIndex(){
+	    System.out.println("looking for an empty index");
 	    for( int i = 0; i < entries.length; i++){
 		cache_entry current = entries[i];
+		System.out.println( "Entry: " + i + " is " + current.isValid() );
 		if( !current.isValid() ){
 		    return i;
 		}
@@ -238,15 +257,36 @@ class cache_sim {
 	// Helper to find an entry by address
 	private int findEntry(String address){
 	    String tag = binary_to_hex(address.substring(0, this.tagSize));
-
+	    System.out.println("Find Tag: " + tag);
 	    for( int i = 0; i < this.entries.length; i++){
 		cache_entry current = this.entries[i];
-		if( current.getTag().equals(tag)){
+		String hexTag = binary_to_hex(current.getTag());
+		System.out.println("Current Tag: " + hexTag);
+		if( hexTag.equals(tag)){
+		    System.out.println("FOUND TAG");
 		    return i;
 		}
 	    }
 	    return -1;
 	}
+
+	// Helper to find an entry by address
+	private int findTag(String tag){
+	    String checktag = binary_to_hex(tag);
+	    System.out.println("Find Tag: " + checktag);
+	    for( int i = 0; i < this.entries.length; i++){
+		cache_entry current = this.entries[i];
+		String hexTag = binary_to_hex(current.getTag());
+		System.out.println("Current Tag: " + hexTag);
+		if( hexTag.equals(checktag)){
+		    System.out.println("FOUND TAG");
+		    return i;
+		}
+	    }
+	    return -1;
+	}
+
+
 
 	private cache_entry getEntry(int idx){
 	    return this.entries[idx];
@@ -275,15 +315,16 @@ class cache_sim {
 	    capacity *= 1024; //Capacity now in bytes
 	    assoc = associativity;	   
             int numofentries = capacity / blocksize;
-	    this.blocksize = blocksize/2;
+	    this.blocksize = blocksize /4;
 	    numofentries /= associativity;
+	    System.out.println("We are making " + numofentries + " entries");
 	    num_sets = numofentries;
 	    sets = new set_block[num_sets];
-	    this.m = Math.log(blocksize) / Math.log(2);
-	    this.n = Math.log(associativity) / Math.log(2);
-	    this.tagsize = 32 - ((int)m + (int)n + 2);
+	    this.m = Math.log(this.blocksize) / Math.log(2);
+	    this.n = Math.log(num_sets) / Math.log(2);
+	    this.tagsize = 32 - ((int)m + (int)n);
 	    for( int i = 0; i < num_sets; i++){
-		sets[i] = new set_block(blocksize/2, numofentries, (int)m, tagsize, associativity);
+		sets[i] = new set_block(this.blocksize, associativity, (int)m, (int)n, tagsize, this);
 	    }
 	    //Finally initialize just missed reads and writes, the rest can be instantiated when we run toString
 	    this.miss_reads = 0;
@@ -299,18 +340,18 @@ class cache_sim {
 	    String binaryAddr = hex_to_binary(address);
 	    this.write_attempts++;
 	    //Which set do we access?
-	    int setLocation = binary_to_int(binaryAddr.substring(this.tagsize, this.tagsize + (int)this.n));
+	    int setLocation = binary_to_int( binaryAddr.substring(this.tagsize, this.tagsize+(int)n));
 	    set_block currentSet = this.sets[setLocation];
 	    //Create a block of memory to pass to writeEntry
 	    String[] memBlock = makeBlock(binaryAddr);
 	    //update it with the new value
 	    int memAddr = binary_to_int(binaryAddr);
 	    memBlock[memAddr % this.blocksize] = value;
-	    //Update address so it points to the start of the block
-	    binaryAddr = int_to_binary(memAddr - (memAddr % this.blocksize));
 	    //Write it to the cache and update the miss ratio
 	    int hitormiss = currentSet.writeEntry(binaryAddr, memBlock, this.sysMem);
-	    this.miss_writes += hitormiss;
+	    if( hitormiss > 0){
+		addWriteMiss();
+	    }
 	}
 
 	/*
@@ -343,12 +384,12 @@ class cache_sim {
 	    //Change it to a 32 bit address
 	    this.read_attempts++;
 	    String binaryAddr = hex_to_binary(address);
-	    int setLocation = binary_to_int(binaryAddr.substring(this.tagsize, this.tagsize + (int)n));
+	    int setLocation = binary_to_int( binaryAddr.substring(this.tagsize, this.tagsize+(int)n));
 	    set_block currentSet = this.sets[setLocation];
 	    cache_entry attempt = currentSet.readEntry(binaryAddr, this.sysMem);
 	    if( !attempt.isValid()){ 
 		//If the attempt is an invalid block we need to read from memory and update the miss count
-		this.miss_reads++;
+		addReadMiss();
 		//Change the offset of the block so it fits our block alignment
 		int startAddr = hex_to_int(address);
 		int startOffset = startAddr % this.blocksize;
@@ -358,7 +399,7 @@ class cache_sim {
 		attempt = currentSet.insertEntry(binaryAddr, memBlock, this.sysMem);
 	    }
 	    //Get the block offset bits and convert to an int
-	    int boffset = binary_to_int( binaryAddr.substring(this.tagsize + (int)n + (int)m, 30));
+	    int boffset = binary_to_int( binaryAddr.substring(32 - (int)m));
             return attempt.getWord(boffset);	    
 	}
 
@@ -375,20 +416,25 @@ class cache_sim {
 	    this.miss_writes++;
 	}
 
+	public void outputState(){
+	    System.out.println("miss_reads: " + this.miss_reads + " miss_writes: " + this.miss_writes);
+	    System.out.println("Tagsize: " + this.tagsize + " m: " + this.m + " n: " + this.n); 
+	}
+
 	public String toString(){
 	    String result = "";
 	    miss_total = miss_reads + miss_writes;
 	    if (miss_reads != 0){
-		missrate_reads = (double)miss_reads / miss_total;
+		missrate_reads = (double)miss_reads / read_attempts;
 	    } else {
 		missrate_reads = 0;
 	    }
 	    if (miss_writes != 0){
-		missrate_writes = (double)miss_writes / miss_total;
+		missrate_writes = (double)miss_writes / write_attempts;
 	    } else {
 		missrate_writes = 0;
 	    }
-	    missrate_total = missrate_reads + missrate_writes;
+	    missrate_total = (double)(miss_writes + miss_reads) / (read_attempts + write_attempts);
 	    result += "STATISTICS\n";
 	    result += "Misses:\n";
 	    result += "Total: " + miss_total + " DataReads: " + miss_reads + " DataWrites: " + miss_writes + "\n";
@@ -405,10 +451,10 @@ class cache_sim {
 	     * 	# of blocks / set associativity = # of sets
 	     * 	
 	     */
-            for( int i = 0; i < 4; i++){
+            for( int i = 0; i < num_sets; i++){
 	    	for( int j = 0; j < assoc; j++ ) {
 		    cache_entry temp = sets[i].getEntry(j);
-		    result += "" + i + "   "  + temp.isValidNum() + "  " + temp.printTag() + "  " + temp.isDirtyNum();
+		    result += "" + int_to_hex(i).substring(6) + "   "  + temp.isValidNum() + "  " + temp.printTag() + "  " + temp.isDirtyNum();
 		    for(int k = 0; k < blocksize; k++){
 			result += "  " + temp.getWord(k);
 		    }
@@ -516,7 +562,7 @@ class cache_sim {
 	    //System.out.println("memory[" + address + "] = " + mem.getBlock(address));        
 	    
 	}
-	
+	cachemem.outputState();
 	System.out.println(cachemem);
 	System.out.println();
 	System.out.println(mem);
@@ -626,12 +672,4 @@ class cache_sim {
 	String temp = int_to_hex(input_integer);
 	return hex_to_binary(temp);
     }
-
-
-    public static String extractTag(String hex, int tagsize){
-	String binary = hex_to_binary(hex);
-	String btag = binary.substring(0, tagsize);
-	return binary_to_hex(btag);
-    }
-
 }
