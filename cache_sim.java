@@ -33,7 +33,15 @@ class cache_sim {
 	    valid = isValid;
 	    dirty = false;
 	    data = new String[numblocks];
-	    for(int i = 0; i < numblocks; i++){
+	    String zeroes = "";
+		for(int i = 0; i < numblocks; i++){
+		if( blocks[i] != null && blocks[i].length() == 4){
+		//	System.out.println("zzzzzzzz - " + blocks[i] + " len = " + blocks[i].length());
+			for(int x = 0; x < (8-blocks[i].length()); x++) {
+				zeroes += "0";
+			}
+			blocks[i] = "" + zeroes + blocks[i];
+		}
 		data[i] = blocks[i];
 	    }
 	}
@@ -189,7 +197,7 @@ class cache_sim {
 	public cache_entry insertEntry(String address, String[] data, memory mem){
 	    String tag = address.substring(0, this.tagSize);
 	    int intAddr = binary_to_int(address);
-	    cache_entry newEntry = new cache_entry(this.blocks, tag, intAddr, data, true);		
+		cache_entry newEntry = new cache_entry(this.blocks, tag, intAddr, data, true);		
 	    int emptyIdx = this.findEmptyIndex(); //Now find somewhere to put this block in the cache
 	    if(emptyIdx == -1){
 		//No vacancy, we have to evict somebody
@@ -443,7 +451,7 @@ class cache_sim {
 	    result += "Number of Dirty Blocks Evicted from the Cache: " + num_evicted + "\n\n";
 	    
 	    result += "CACHE CONTENTS\n";
-	    result += "Set V  Tag       D  Words\n";
+	    result += "Set  V  Tag       D  Words\n";
 	
 	    /*
 	     *
@@ -493,7 +501,7 @@ class cache_sim {
 	public String toString(){
 	    String result = "";
 	    result += "MAIN MEMORY:\n";
-	    result += "Address  Words\n";
+	    result += "Address   Words\n";
 	    
 	    int start = cache_sim.hex_to_int("003f7e00");
        
