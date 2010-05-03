@@ -139,7 +139,7 @@ class cache_sim {
 	public int writeEntry(String address, String[] data, memory mem){ 
 	    //Check to see if we're holding onto this address in this set
 	    int entryIndex = findEntry(address);
-	    System.out.println("Set has this at: " + entryIndex + " for address: " + binary_to_hex(address));
+	    //System.out.println("Set has this at: " + entryIndex + " for address: " + binary_to_hex(address));
 	    int miss = 0;
 	    //We'll need this in both
 	    String temptag = address.substring(0, this.tagSize);
@@ -147,7 +147,7 @@ class cache_sim {
 	    this.LRUcontainer.add(temptag);
 	    //Address is in cache A.K.A Hit
 	    if(entryIndex >= 0){ 
-		System.out.println("Cache Hit!");
+		//System.out.println("Cache Hit!");
 		//So move it to the end, because it is the most recently used
 		this.LRUcontainer.remove(addressIdx);
 		//Now find it's location
@@ -156,13 +156,13 @@ class cache_sim {
 
 		//Update the entry with the new data, we use the address to find the correct offset
 		int boffset = binary_to_int(address.substring(tagSize + index));
-		System.out.println("Current boffset " + boffset + "pulled from " + (tagSize + index));
+		//System.out.println("Current boffset " + boffset + "pulled from " + (tagSize + index));
 		current.updateEntry(data, boffset);
 
 	    }
 	    if (addressIdx == -1){
 		//Address isn't in cache, A.K.A. Miss
-		System.out.println("We just missed");
+		//System.out.println("We just missed");
 		miss = 1;
 		String newTag = address.substring(0, this.tagSize);
 		int intAddress = binary_to_int(address);
@@ -202,11 +202,11 @@ class cache_sim {
 	}
 
 	public void evict(String toevict, cache_entry entry, String address, memory mem){
-	    System.out.println("I'm evicting " + toevict  + " right now");
-	    System.out.println(this.LRUcontainer);
-	    for( int i=0; i < entries.length; i++){
+	    //System.out.println("I'm evicting " + toevict  + " right now");
+	    //System.out.println(this.LRUcontainer);
+	    /*for( int i=0; i < entries.length; i++){
 		System.out.println(this.entries[i].getTag());
-	    }
+		}*/
 	    //Before we remove lets check to see if this entry is dirty and if so, write back to memory
 	    int oldIdx = findTag(toevict);
 	    cache_entry evicted = this.entries[oldIdx];
@@ -243,10 +243,10 @@ class cache_sim {
 
 	// Simple helper method to find an empty block in this set
 	public int findEmptyIndex(){
-	    System.out.println("looking for an empty index");
+	    //System.out.println("looking for an empty index");
 	    for( int i = 0; i < entries.length; i++){
 		cache_entry current = entries[i];
-		System.out.println( "Entry: " + i + " is " + current.isValid() );
+		//System.out.println( "Entry: " + i + " is " + current.isValid() );
 		if( !current.isValid() ){
 		    return i;
 		}
@@ -257,13 +257,13 @@ class cache_sim {
 	// Helper to find an entry by address
 	private int findEntry(String address){
 	    String tag = binary_to_hex(address.substring(0, this.tagSize));
-	    System.out.println("Find Tag: " + tag);
+	    //System.out.println("Find Tag: " + tag);
 	    for( int i = 0; i < this.entries.length; i++){
 		cache_entry current = this.entries[i];
 		String hexTag = binary_to_hex(current.getTag());
-		System.out.println("Current Tag: " + hexTag);
+		//System.out.println("Current Tag: " + hexTag);
 		if( hexTag.equals(tag)){
-		    System.out.println("FOUND TAG");
+		    //System.out.println("FOUND TAG");
 		    return i;
 		}
 	    }
@@ -273,13 +273,13 @@ class cache_sim {
 	// Helper to find an entry by address
 	private int findTag(String tag){
 	    String checktag = binary_to_hex(tag);
-	    System.out.println("Find Tag: " + checktag);
+	    //System.out.println("Find Tag: " + checktag);
 	    for( int i = 0; i < this.entries.length; i++){
 		cache_entry current = this.entries[i];
 		String hexTag = binary_to_hex(current.getTag());
-		System.out.println("Current Tag: " + hexTag);
+		//System.out.println("Current Tag: " + hexTag);
 		if( hexTag.equals(checktag)){
-		    System.out.println("FOUND TAG");
+		    //System.out.println("FOUND TAG");
 		    return i;
 		}
 	    }
@@ -317,7 +317,7 @@ class cache_sim {
             int numofentries = capacity / blocksize;
 	    this.blocksize = blocksize /4;
 	    numofentries /= associativity;
-	    System.out.println("We are making " + numofentries + " entries");
+	    //System.out.println("We are making " + numofentries + " entries");
 	    num_sets = numofentries;
 	    sets = new set_block[num_sets];
 	    this.m = Math.log(this.blocksize) / Math.log(2);
@@ -439,7 +439,7 @@ class cache_sim {
 	    result += "Misses:\n";
 	    result += "Total: " + miss_total + " DataReads: " + miss_reads + " DataWrites: " + miss_writes + "\n";
 	    result += "Miss rate:\n";
-	    result += "Total: " + missrate_total + " DataReads: " + missrate_reads + " DataWrites: " + missrate_writes + "\n";
+	    result += "Total: " + String.format("%.4g", missrate_total) + " DataReads: " + String.format("%.4g", missrate_reads) + " DataWrites: " + String.format("%.4g", missrate_writes) + "\n";
 	    result += "Number of Dirty Blocks Evicted from the Cache: " + num_evicted + "\n\n";
 	    
 	    result += "CACHE CONTENTS\n";
@@ -451,6 +451,9 @@ class cache_sim {
 	     * 	# of blocks / set associativity = # of sets
 	     * 	
 	     */
+
+	    //String.format("%.5g%n", 0.912385);
+
             for( int i = 0; i < num_sets; i++){
 	    	for( int j = 0; j < assoc; j++ ) {
 		    cache_entry temp = sets[i].getEntry(j);
@@ -494,7 +497,7 @@ class cache_sim {
 	    
 	    int start = cache_sim.hex_to_int("003f7e00");
        
-	    for(int i=0; i < 10; i++){
+	    for(int i=0; i < 1024; i++){
 		result += int_to_hex(start + i*8);
 		for(int j=0; j < 8; j++){
 		    result += "  " + getBlock(start + i*8 + j);
@@ -562,9 +565,9 @@ class cache_sim {
 	    //System.out.println("memory[" + address + "] = " + mem.getBlock(address));        
 	    
 	}
-	cachemem.outputState();
+	//cachemem.outputState();
 	System.out.println(cachemem);
-	System.out.println();
+	//System.out.println();
 	System.out.println(mem);
     }
 
@@ -659,7 +662,7 @@ class cache_sim {
 
     public static String int_to_hex(int input_integer) {
 	String hex_string;
-	hex_string=Integer.toHexString(input_integer);
+	hex_string = Integer.toHexString(input_integer);
 	while(hex_string.length()<8)
 	    {
 		hex_string = "0" + hex_string;
