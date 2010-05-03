@@ -156,7 +156,7 @@ class cache_sim {
 		current.updateEntry(data, address);
 
 	    } else { //Address isn't in cache, A.K.A. Miss
-		String newTag = address.substring(0, this.tagSize);
+		String newTag = address.substring(0, this.tagSize + 1);
 		int intAddress = binary_to_int(address);
 		cache_entry newEntry = new cache_entry(this.blocks, newTag, intAddress, data, true);
 		int emptyIdx = findEmptyIndex(); 
@@ -178,7 +178,7 @@ class cache_sim {
 	 *  @param data, the block of data passed in from 
 	 */
 	public cache_entry insertEntry(String address, String[] data, memory mem){
-	    String tag = address.substring(0, this.tagSize);
+	    String tag = address.substring(0, this.tagSize + 1);
 	    int intAddr = binary_to_int(address);
 	    cache_entry newEntry = new cache_entry(this.blocks, tag, intAddr, data, true);		
 	    int emptyIdx = findEmptyIndex(); //Now find somewhere to put this block in the cache
@@ -298,7 +298,7 @@ class cache_sim {
 	    String binaryAddr = hex_to_binary(address);
 	    this.write_attempts++;
 	    //Which set do we access?
-	    int setLocation = binary_to_int(binaryAddr.substring(this.tagsize, this.tagsize + (int)n));
+	    int setLocation = binary_to_int(binaryAddr.substring(this.tagsize, this.tagsize + (int)this.n));
 	    set_block currentSet = this.sets[setLocation];
 	    //Create a block of memory to pass to writeEntry
 	    String[] memBlock = makeBlock(binaryAddr);
