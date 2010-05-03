@@ -95,6 +95,10 @@ class cache_sim {
 		return 1;
 	    else return 0;
 	}
+
+	public int getAddress() {
+	    return this.address;
+	}
 	
 	public String printTag(){
 	    String tagtag = binary_to_hex(this.tag);
@@ -427,6 +431,17 @@ class cache_sim {
 	public void outputState(){
 	    System.out.println("miss_reads: " + this.miss_reads + " miss_writes: " + this.miss_writes);
 	    System.out.println("Tagsize: " + this.tagsize + " m: " + this.m + " n: " + this.n); 
+	}
+
+	public void writeToFile(){
+	    for( int i = 0; i < this.sets.length; i++){
+		set_block cSet = this.sets[i];
+		for( int tEntry = 0; tEntry < assoc; tEntry++){
+		    cache_entry cEntry = cSet.getEntry(tEntry);
+		    int address = cEntry.getAddress();
+		    cEntry.write2file(address, this.sysMem);
+		}
+	    }
 	}
 
 	public String toString(){
