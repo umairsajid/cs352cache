@@ -589,6 +589,7 @@ class cache_sim {
 	    
 	}
 	//cachemem.outputState();
+	cachemem.writeToFile();
 	System.out.println(cachemem);
 	//System.out.println();
 	System.out.println(mem);
