@@ -500,7 +500,7 @@ class cache_sim {
 	    for(int i=0; i < 1024; i++){
 		result += int_to_hex(start + i*8);
 		for(int j=0; j < 8; j++){
-		    result += "  " + getBlock(start + i*8 + j);
+		    result += "  " + int_to_hex(getBlock(start + i*8 + j));
 		}
 		result += "\n";
 	    }
