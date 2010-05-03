@@ -73,7 +73,7 @@ class cache_sim {
 	//Set the dirty bit on this entry
 	public void makeDirty() {
 	    this.dirty = true;
-	}
+	} 
 
 	//Given a block offset, get the inner block from this entry 
 	public String getWord(int blockoffset) {
