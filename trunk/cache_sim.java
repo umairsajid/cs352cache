@@ -58,6 +58,12 @@ class cache_sim {
 	public boolean isValid(){
 	    return this.valid;
 	}
+
+	public int isValidNum(){
+	    if(this.valid)
+		return 1;
+	    else return 0;
+	}
 	
 	//Get the tag for this entry
 	public String getTag(){
@@ -78,6 +84,21 @@ class cache_sim {
 	    return this.dirty;
 	}
 	
+	public int isDirtyNum() {
+	    if(this.dirty)
+		return 1;
+	    else return 0;
+	}
+	
+	public String printTag(){
+	    String tagtag = binary_to_hex(this.tag);
+	    int temp = 8 - tagtag.length();
+	    String zeroes = "";
+	    for(int i = 0;  i < temp; i++){
+		zeroes += "0";
+	    }
+	    return zeroes + binary_to_hex(this.tag);
+	}
     }
 
     //A container class for cache data
@@ -103,7 +124,11 @@ class cache_sim {
 	    this.LRUcontainer = new ArrayList<String>(); //our LRU queue, holds binary addresses
 	    this.blocks = datablocks;
 	    for(int i = 0; i < numEntries; i++){
-		this.entries[i] = new cache_entry(datablocks, "00000000", 0, new String[datablocks], false);
+		String array[] = new String[datablocks];
+		for(int x = 0; x < datablocks; x++){
+		    array[x] = "00000000";
+		}
+		this.entries[i] = new cache_entry(datablocks, "00000000", 0, array, false);
 	    }
 	}
 
@@ -222,7 +247,9 @@ class cache_sim {
 	    return -1;
 	}
 
-	
+	private cache_entry getEntry(int idx){
+	    return this.entries[idx];
+	}
 
 	
     }
@@ -233,7 +260,10 @@ class cache_sim {
 	private double n; //Set or Index bits
 	private double m; //Block selection bits
 	private int blocksize;
-	private int miss_total, miss_reads, miss_writes, num_evicted, read_attempts, write_attempts;
+	private int capacity;
+	private int assoc;
+	private int read_attempts, write_attempts;
+	private int num_sets, miss_total, miss_reads, miss_writes, num_evicted;
 	private double  missrate_total, missrate_reads, missrate_writes;
 	private memory sysMem;     //The memory object that we will be writing to and reading from
 
@@ -242,14 +272,16 @@ class cache_sim {
 	    this.sysMem = mem;
 	    //Capacity comes in as kilobytes so multiply by (1024/16) or 64 to get the capacity in blocks
 	    capacity *= 1024; //Capacity now in bytes
-	    int numofentries = capacity / blocksize;
+	    assoc = associativity;	   
+            int numofentries = capacity / blocksize;
 	    this.blocksize = blocksize/2;
 	    numofentries /= associativity;
-	    sets = new set_block[associativity];
+	    num_sets = numofentries;
+	    sets = new set_block[num_sets];
 	    this.m = Math.log(blocksize) / Math.log(2);
 	    this.n = Math.log(associativity) / Math.log(2);
 	    this.tagsize = 32 - ((int)m + (int)n + 2);
-	    for( int i = 0; i < associativity; i++){
+	    for( int i = 0; i < num_sets; i++){
 		sets[i] = new set_block(blocksize/2, numofentries, (int)m, tagsize, associativity);
 	    }
 	    //Finally initialize just missed reads and writes, the rest can be instantiated when we run toString
@@ -364,9 +396,24 @@ class cache_sim {
 	    result += "Number of Dirty Blocks Evicted from the Cache: " + num_evicted + "\n\n";
 	    
 	    result += "CACHE CONTENTS\n";
-	    result += "Set\tV  Tag          D  Words";
-
-	 
+	    result += "Set V  Tag       D  Words\n";
+	
+	    /*
+	     *
+	     * 	capacity (in bytes)/block size(bytes) = # of blocks
+	     * 	# of blocks / set associativity = # of sets
+	     * 	
+	     */
+            for( int i = 0; i < 4; i++){
+	    	for( int j = 0; j < assoc; j++ ) {
+		    cache_entry temp = sets[i].getEntry(j);
+		    result += "" + i + "   "  + temp.isValidNum() + "  " + temp.printTag() + "  " + temp.isDirtyNum();
+		    for(int k = 0; k < blocksize; k++){
+			result += "  " + temp.getWord(k);
+		    }
+		    result += "\n";
+		}
+	    }		 
 	    return result;
 	}
     }
@@ -470,6 +517,8 @@ class cache_sim {
 	}
 	
 	System.out.println(cachemem);
+	System.out.println();
+	System.out.println(mem);
     }
 
     public boolean parseParams(String[] args)
