@@ -18,6 +18,7 @@ class cache_sim {
 	private String[] data;
 	private String tag;
 	private int address;
+	private int age;
 	
 	/*
 	 * Constructor, uses deep copy on incoming block data
@@ -30,6 +31,7 @@ class cache_sim {
 	public cache_entry(int numblocks, String tag, int location, String[] blocks, boolean isValid){
 	    this.tag = tag;
 	    this.address = location;
+	    this.age = 0;
 	    valid = isValid;
 	    dirty = false;
 	    data = new String[numblocks];
@@ -46,7 +48,6 @@ class cache_sim {
 	}
 
 	//Update method to just change the data associated with it, sets the dirty bit
-	//TODO: handle the offset address with same tag problem.
 	public void updateEntry(String[] blocks, int boffset){
 	    this.data[boffset] = blocks[boffset];
 	    makeDirty();
@@ -98,17 +99,17 @@ class cache_sim {
 	public int getAddress() {
 	    return this.address;
 	}
-
-	public void printEntry(){
-	    System.out.println( "Valid: " + isValid() );
-	    System.out.println( "Tag: " + printTag() );
-	    System.out.println( "Dirty: " + isDirty() );
-	    System.out.println( "Address: " + int_to_hex(getAddress()));
-	    System.out.println( "Data: ");
-	    for( int i = 0; i < this.data.length; i++){
-		System.out.print( getWord(i) + "  ");
-	    }
-	    System.out.println();
+	
+	public void updateAge() {
+		this.age++;
+	}
+	
+	public void resetAge() {
+		
+	}
+	
+	public int returnAge() {
+		return this.age;
 	}
 	
 	public String printTag(){
@@ -126,11 +127,11 @@ class cache_sim {
     private static class set_block {
 	private cache cacheObj;                   //A pointer to the parent cache object
 	private cache_entry[] entries;
-	private ArrayList<String> LRUcontainer;  //we store the whole address of the entry here 
 	private int blocks;                       //The number of words
 	private int tagSize;                      //The size of our tags
 	private int boffset;                      //block offset size
 	private int index;                        //The number of index bits
+	private cache_entry LRU;                  //The cache_entry that is least recently used
 	private cache parent;                     //The cache object that points to this set
 	/*
 	 *  Constructor: creates a full, empty set
@@ -142,16 +143,16 @@ class cache_sim {
 	    this.boffset = boffset;
 	    this.index = index;
 	    this.entries = new cache_entry[numEntries];
-	    this.LRUcontainer = new ArrayList<String>(); //our LRU queue, holds binary addresses
 	    this.blocks = datablocks;
 	    this.parent = cachemem;
 	    for(int i = 0; i < numEntries; i++){
-		String array[] = new String[datablocks];
-		for(int x = 0; x < datablocks; x++){
-		    array[x] = "00000000";
+			String array[] = new String[datablocks];
+			for(int x = 0; x < datablocks; x++){
+			    array[x] = "00000000";
+			}
+			this.entries[i] = new cache_entry(datablocks, "00000000", 0, array, false);
 		}
-		this.entries[i] = new cache_entry(datablocks, "00000000", 0, array, false);
-	    }
+	    this.LRU = new cache_entry(datablocks, "00000000", 0, new String[datablocks], false);
 	}
 
 	/*
@@ -162,54 +163,36 @@ class cache_sim {
 	public int writeEntry(String address, String[] data, memory mem){ 
 	    //Check to see if we're holding onto this address in this set
 	    int entryIndex = findEntry(address);
-	    //System.out.println("Set has this at: " + entryIndex + " for address: " + binary_to_hex(address));
 	    int miss = 0;
-	    //We'll need this in both
-	    String temptag = address.substring(0, this.tagSize);
-	    //Get the location
-	    int addressIdx = this.LRUcontainer.indexOf(temptag); //this.LRUcontainer.indexOf(temptag);
-
 	    //Address is in cache A.K.A Hit
 	    if(entryIndex >= 0){ 
-		//System.out.println("Cache Hit!");
-		//So move it to the end, because it is the most recently used
-		cache_entry test = this.entries[entryIndex];
-	        test.printEntry();
-		//System.out.println("Address is in container at: " + addressIdx);
-		//System.out.println("Address : " + address);
-		//System.out.println("Looking for tag : " + temptag);
-		//System.out.println(LRUcontainer);
-		this.LRUcontainer.remove(addressIdx);
-		this.LRUcontainer.add(temptag);
-		//Now find it's location
-		int selectIdx = findEntry(address);
-		cache_entry current = this.entries[selectIdx];
-		//Update the entry with the new data, we use the address to find the correct offset
-		int boffset = binary_to_int(address.substring(tagSize + index));
-		//System.out.println("Current boffset " + boffset + "pulled from " + (tagSize + index));
-		current.updateEntry(data, boffset);
-
+			//Update the entry with the new data, we use the address to find the correct offset
+			cache_entry current = this.entries[entryIndex];
+			//So Update it's age as it's the most recently used
+	    	updateLRU(current);
+			int boffset = binary_to_int(address.substring(tagSize + index));
+			current.updateEntry(data, boffset);
 	    }   else {
-		//Address isn't in cache, A.K.A. Miss
-		//System.out.println("We just missed");
-		this.LRUcontainer.add(temptag);
-		miss = 1;
-		String newTag = address.substring(0, this.tagSize);
-		int intAddress = binary_to_int(address);
-		//Offset so entry has correct address
-		int position = intAddress % this.blocks;
-		intAddress -= position;
-		cache_entry newEntry = new cache_entry(this.blocks, newTag, intAddress, data, true);
-		newEntry.makeDirty();
-		int emptyIdx = findEmptyIndex(); 
-		//Find somewhere to put this block in the cache
-
-		//No vacancy, we have to evict somebody
-		if(emptyIdx == -1){ evict(LRUcontainer.get(0), newEntry, address, mem);
-		    //Otherwise set the new entry into the empty Index
-		} else { this.entries[emptyIdx] = newEntry;}
+			//Address isn't in cache, A.K.A. Miss
+			miss = 1;
+			String newTag = address.substring(0, this.tagSize);
+			int intAddress = binary_to_int(address);
+			//Offset so entry has correct address
+			int position = intAddress % this.blocks;
+			intAddress -= position;
+			cache_entry newEntry = new cache_entry(this.blocks, newTag, intAddress, data, true);
+			newEntry.makeDirty();
+			int emptyIdx = findEmptyIndex(); 
+			//Find somewhere to put this block in the cache
+			if(emptyIdx == -1){ 
+				//No vacancy, we have to evict somebody
+			    cache_entry leastRecent = getLRU();
+				evict(leastRecent, newEntry, address, mem);  
+			    //Otherwise set the new entry into the empty Index
+			} else { this.entries[emptyIdx] = newEntry;}
+			//Update to make sure that all entries stay in step
+			updateLRU(newEntry);
 	    }
-
 	    return miss;
 	}
 
@@ -225,38 +208,29 @@ class cache_sim {
 		cache_entry newEntry = new cache_entry(this.blocks, tag, intAddr, data, true);		
 	    int emptyIdx = this.findEmptyIndex(); //Now find somewhere to put this block in the cache
 	    if(emptyIdx == -1){
-		//No vacancy, we have to evict somebody
-		evict(LRUcontainer.get(0), newEntry, address, mem);     
+			//No vacancy, we have to evict somebody
+		    cache_entry leastRecent = getLRU();
+			evict(leastRecent, newEntry, address, mem);     
 	    } else {
-		//Otherwise set the new entry into the empty Index
-		this.entries[emptyIdx] = newEntry; 	  
+			//Otherwise set the new entry into the empty Index
+			this.entries[emptyIdx] = newEntry; 	  
 	    }
+	    updateLRU(newEntry);
 	    return newEntry;
 	}
 
-	public void evict(String toevict, cache_entry entry, String address, memory mem){
-	    //System.out.println(this.LRUcontainer);
-	    /*for( int i=0; i < entries.length; i++){
-		System.out.println(this.entries[i].getTag());
-		}*/
+	public void evict(cache_entry toevict, cache_entry entry, String address, memory mem){
 	    //Before we remove lets check to see if this entry is dirty and if so, write back to memory
-	    int oldIdx = findTag(toevict);
-	    cache_entry evicted = this.entries[oldIdx];
-	    //System.out.print("Making room for ");
-	    //entry.printEntry();
-    	    //System.out.println("I'm evicting " + binary_to_hex(evicted.getTag())  + " right now");
-	    //evicted.printEntry();
-	    if (evicted.isDirty()){
-		//Write back to memory
-		//convert the binary string address to an integer value
-		int intAddr = evicted.getAddress();
-		//System.out.println("I'm writing back at address" + int_to_hex(evicted.getAddress()));
-		evicted.write2file(intAddr, mem);
-		//System.out.println( int_to_hex(mem.getBlock(intAddr)) );
+	    int oldIdx = findTag(toevict.getTag());
+	    if (toevict.isDirty()){
+			//Write back to memory
+			//convert the binary string address to an integer value
+			int intAddr = toevict.getAddress();
+			toevict.write2file(intAddr, mem);
 	    }
-	    LRUcontainer.remove(0);
 	    //Put the entry into the location that we just evicted
 	    this.entries[oldIdx] = entry; 
+	    //And update the cache's number of evicts
 	    this.parent.updateEvict();
 	}
 
@@ -265,79 +239,86 @@ class cache_sim {
 	 * @param address, the memory location we're looking for
 	 */
 	public cache_entry readEntry(String address, memory mem){
-	    String temptag = address.substring(0, this.tagSize);
 	    int entryIdx = findEntry(address);
-	    if( entryIdx == -1){ //If we read a miss we return an invalid entry
-		this.LRUcontainer.add(temptag);
-		return new cache_entry(this.blocks, "", 0, new String[this.blocks], false);
+	    if( entryIdx == -1){ 
+	    	//If we read a miss we return an invalid entry
+	    	return new cache_entry(this.blocks, "", 0, new String[this.blocks], false);
 	    } else {
-		// Return the index location of the address in our LRU
-	        int addressIdx = this.LRUcontainer.indexOf(temptag);
-		//And remove it as it has been used recently
-		this.LRUcontainer.remove(entryIdx);
-		this.LRUcontainer.add(temptag);	
-		return this.entries[entryIdx];
+		    cache_entry returned = this.entries[entryIdx];
+		    updateLRU(returned);
+			return this.entries[entryIdx];
 	    }
 	}
 
-	// Simple helper method to find an empty block in this set
+	// Returns the index of an empty index in our entries array
 	public int findEmptyIndex(){
-	    //System.out.println("looking for an empty index");
 	    for( int i = 0; i < entries.length; i++){
-		cache_entry current = entries[i];
-		//System.out.println( "Entry: " + i + " is " + current.isValid() );
-		if( !current.isValid() ){
-		    return i;
-		}
+			cache_entry current = entries[i];
+			if( !current.isValid() ){
+			    return i;
+			}
 	    }
 	    return -1;
 	}
 
 	// Helper to find an entry by address
+	// I was going to convert the address to an int and compare it to the entries address
+	// but I didn't think that was a true representation of the cache 
 	private int findEntry(String address){
 	    String tag = binary_to_hex(address.substring(0, this.tagSize));
-	    //System.out.println("Find Tag: " + tag);
 	    for( int i = 0; i < this.entries.length; i++){
-		cache_entry current = this.entries[i];
-		String hexTag = binary_to_hex(current.getTag());
-		//System.out.println("Current Tag: " + hexTag);
-		if( hexTag.equals(tag)){
-		    //System.out.println("FOUND TAG");
-		    return i;
-		}
+			cache_entry current = this.entries[i];
+			String hexTag = binary_to_hex(current.getTag());
+			if( hexTag.equals(tag)){
+			    return i;
+			}
 	    }
 	    return -1;
 	}
 
-	// Helper to find an entry by address
+	// Helper to find an entry by tag
 	private int findTag(String tag){
 	    String checktag = binary_to_hex(tag);
-	    //System.out.println("Find Tag: " + checktag);
 	    for( int i = 0; i < this.entries.length; i++){
 		cache_entry current = this.entries[i];
 		String hexTag = binary_to_hex(current.getTag());
-		//System.out.println("Current Tag: " + hexTag);
-		if( hexTag.equals(checktag)){
-		    //System.out.println("FOUND TAG");
-		    return i;
-		}
+			if( hexTag.equals(checktag)){
+			    return i;
+			}
 	    }
 	    return -1;
 	}
 
-	public int getIndexLRU(String tag){
-	    //System.out.println("Length of tag: " + tag.length());
-	    int intTag = binary_to_int(tag);
-	    //System.out.println("SIZE: " + this.LRUcontainer.size());
-	    for( int i = 0; i < this.LRUcontainer.size(); i++){
-		int currentInt = binary_to_int(this.LRUcontainer.get(i));
-		//System.out.println(currentInt + "   " + intTag + "   " + (currentInt == intTag));
-		if( currentInt == intTag){
-		    return i;
+	public void updateLRU(cache_entry updated){
+		//Every time we use an entry we reset it's age to zero
+		updated.resetAge();
+		//Then we age everybody since we've just made an update
+		for( int i = 0; i < entries.length; i++){
+			cache_entry current = entries[i];
+			current.updateAge();
+			//If the current entry is older replace the LRU with it
+			if(this.LRU.returnAge() < current.returnAge()){
+				this.LRU = current;
+			}
 		}
-	    }
-	    return -1;
 	}
+	
+	public cache_entry getLRU(){
+		//First we hold onto our oldest entry
+		//Then we scan through our entries to find which it points to and find a replacement
+		cache_entry replacement = new cache_entry(this.blocks, "", 0, new String[this.blocks], false);
+		for( int i = 0; i < entries.length; i++){
+			cache_entry current = entries[i];
+			//If this entry is older than all the others we've scanned and he is not the current LRU, then hold onto him
+			if((replacement.returnAge() < current.returnAge()) && (!current.equals(this.LRU))){
+				replacement = current;
+			}
+		}
+		cache_entry oldest = this.LRU;
+		this.LRU = replacement;
+		return oldest;
+	}
+
 
 	private cache_entry getEntry(int idx){
 	    return this.entries[idx];
@@ -352,7 +333,6 @@ class cache_sim {
 	private double n; //Set or Index bits
 	private double m; //Block selection bits
 	private int blocksize;
-	private int capacity;
 	private int assoc;
 	private int read_attempts, write_attempts;
 	private int num_sets, miss_total, miss_reads, miss_writes, num_evicted;
@@ -365,7 +345,7 @@ class cache_sim {
 	    //Capacity comes in as kilobytes so multiply by (1024/16) or 64 to get the capacity in blocks
 	    capacity *= 1024; //Capacity now in bytes
 	    assoc = associativity;	   
-            int numofentries = capacity / blocksize;
+        int numofentries = capacity / blocksize;
 	    this.blocksize = blocksize /4;
 	    numofentries /= associativity;
 	    //System.out.println("We are making " + numofentries + " entries");
@@ -375,7 +355,7 @@ class cache_sim {
 	    this.n = Math.log(num_sets) / Math.log(2);
 	    this.tagsize = 32 - ((int)m + (int)n);
 	    for( int i = 0; i < num_sets; i++){
-		sets[i] = new set_block(this.blocksize, associativity, (int)m, (int)n, tagsize, this);
+	    	sets[i] = new set_block(this.blocksize, associativity, (int)m, (int)n, tagsize, this);
 	    }
 	    //Finally initialize just missed reads and writes, the rest can be instantiated when we run toString
 	    this.miss_reads = 0;
@@ -433,7 +413,6 @@ class cache_sim {
 	 * @param mem    : the memory object that we will be reading from
 	 */
 	public String cacheRead(String address){
-	    //TODO: get the right set block/ direct mapped block for this address
 	    //Change it to a 32 bit address
 	    this.read_attempts++;
 	    String binaryAddr = hex_to_binary(address);
@@ -615,10 +594,11 @@ class cache_sim {
 	    // check again if we have reached the end
 	    // as this flag is set only after a 'cin'
 	    //if(feof(stdin)) return 1;
+	    //This pads the address in case they don't come in 8 bytes
 	    String zeroes = "";
 	    int difference = 8 - strings[1].length();
 	    for( int x = 0; x < difference; x++ ){
-		zeroes += "0";
+	    	zeroes += "0";
 	    }
 	    strings[1] = "" + zeroes + strings[1]; 
 
