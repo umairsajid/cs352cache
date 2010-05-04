@@ -1,0 +1,44 @@
+Test Case #1
+============
+Misses:
+Total: 12 DataReads: 12 DataWrites: 0
+Miss rate:
+Total: 1.000 DataReads: 1.000 DataWrites: 0.000
+Number of Dirty Blocks Evicted from the Cache: 0
+
+
+Test Case #2
+============
+Misses:
+Total: 16 DataReads: 16 DataWrites: 0
+Miss rate:
+Total: 0.8889 DataReads: 0.8889 DataWrites: 0.000
+Number of Dirty Blocks Evicted from the Cache: 1
+
+
+Test Case #3
+============
+Misses:
+Total: 17 DataReads: 4 DataWrites: 13
+Miss rate:
+Total: 1.000 DataReads: 1.000 DataWrites: 1.000
+Number of Dirty Blocks Evicted from the Cache: 3
+
+
+Test Case #4
+============
+Misses:
+Total: 17 DataReads: 4 DataWrites: 13
+Miss rate:
+Total: 1.000 DataReads: 1.000 DataWrites: 1.000
+Number of Dirty Blocks Evicted from the Cache: 9
+
+
+Stress Test Stats
+=================
+Misses:
+Total: 41678 DataReads: 331 DataWrites: 41347
+Miss rate:
+Total: 0.4168 DataReads: 0.02940 DataWrites: 0.4659
+Number of Dirty Blocks Evicted from the Cache: 41550
+
