@@ -221,7 +221,7 @@ class cache_sim {
 
 	public void evict(cache_entry toevict, cache_entry entry, String address, memory mem){
 	    //Before we remove lets check to see if this entry is dirty and if so, write back to memory
-	    int oldIdx = findTag(toevict.getTag());
+	    int oldIdx = findEntry(int_to_binary(toevict.getAddress()));
 	    if (toevict.isDirty()){
 			//Write back to memory
 			//convert the binary string address to an integer value
