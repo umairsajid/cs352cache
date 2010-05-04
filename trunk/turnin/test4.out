@@ -1,29 +1,3 @@
-Writing to set: 4
-00000000001111111000000000010000    [Ljava.lang.String;@a422ede
-Writing to set: 5
-00000000001111111000000000010100    [Ljava.lang.String;@7f12f614
-Writing to set: 6
-00000000001111111000000000011000    [Ljava.lang.String;@35d9dc39
-Writing to set: 7
-00000000001111111000000000011100    [Ljava.lang.String;@72093dcd
-Writing to set: 3
-00000000001111111000000000001100    [Ljava.lang.String;@3cb89838
-Writing to set: 1
-00000000001111111000000000000100    [Ljava.lang.String;@7b11a3ac
-Writing to set: 4
-00000000001111111000100000010000    [Ljava.lang.String;@4310b053
-Writing to set: 4
-00000000001111111001000000010000    [Ljava.lang.String;@7ca83b8a
-Writing to set: 4
-00000000001111111010000000010000    [Ljava.lang.String;@8dd20f6
-Writing to set: 4
-00000000001111111011000000010000    [Ljava.lang.String;@6d9efb05
-Writing to set: 0
-00000000001111111000100000000000    [Ljava.lang.String;@60723d7c
-Writing to set: 0
-00000000001111111010000000000000    [Ljava.lang.String;@6c22c95b
-Writing to set: 0
-00000000001111111101100000000000    [Ljava.lang.String;@5fd1acd3
 STATISTICS
 Misses:
 Total: 17 DataReads: 4 DataWrites: 13

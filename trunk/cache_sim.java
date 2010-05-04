@@ -392,7 +392,7 @@ class cache_sim {
 	    this.write_attempts++;
 	    //Which set do we access?
 	    int setLocation = binary_to_int( binaryAddr.substring(this.tagsize, this.tagsize+(int)n));
-	    System.out.println("Writing to set: " + setLocation);
+	    //System.out.println("Writing to set: " + setLocation);
 	    set_block currentSet = this.sets[setLocation];
 	    //Create a block of memory to pass to writeEntry
 	    String[] memBlock = makeBlock(binaryAddr);
@@ -401,7 +401,6 @@ class cache_sim {
 	    
 	    memBlock[memAddr % this.blocksize] = value;
 	    //Write it to the cache and update the miss ratio
-	    System.out.println(binaryAddr + "    " + memBlock);
 	    int hitormiss = currentSet.writeEntry(binaryAddr, memBlock, this.sysMem);
 	    if( hitormiss > 0){
 		addWriteMiss();
