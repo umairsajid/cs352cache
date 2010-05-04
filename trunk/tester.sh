@@ -16,3 +16,6 @@ do
 	echo "..."
     done
 done
+
+echo "Done!"
+exit 0;
