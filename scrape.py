@@ -19,7 +19,7 @@ for assoc in Assocs:
             if len(lines) > 2:
                 rateOmisses = lines[4]
                 searched = re.search('[0-9].[0-9]*', rateOmisses)
-                if not( searched is null ):
+                if not( searched is None ):
                     assoclist.append(searched.groups(0))
                 else:
                     assoclist.append(0)
@@ -29,7 +29,7 @@ for assoc in Assocs:
 report = "Assoc. "
 for block in Blocks:
     for capac in Capacity:
-        report += " " + str(block) + " / " + str(capacity) + " "
+        report += " " + str(block) + " / " + str(capac) + " "
 print report
 
 for assoc in Assocs:
