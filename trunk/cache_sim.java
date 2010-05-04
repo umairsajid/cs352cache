@@ -488,7 +488,7 @@ class cache_sim {
 	    result += "Number of Dirty Blocks Evicted from the Cache: " + num_evicted + "\n\n";
 	    
 	    result += "CACHE CONTENTS\n";
-	    result += "Set  V  Tag       D  Words\n";
+	    result += "Set   V  Tag       D  Words\n";
 	
 	    /*
 	     *
@@ -501,8 +501,14 @@ class cache_sim {
 
             for( int i = 0; i < num_sets; i++){
 	    	for( int j = 0; j < assoc; j++ ) {
+		    //Next few lines check the length of the set# and decide how to format it
+		    String formati = "" + i;
+		    int formatiLength = formati.length();
+		    formati = int_to_hex(i).substring(8-formatiLength);
+			if(formati.charAt(0) == '0' && formatiLength > 1) formati = formati.substring(1);	
 		    cache_entry temp = sets[i].getEntry(j);
-		    result += "" + int_to_hex(i).substring(6) + "   "  + temp.isValidNum() + "  " + temp.printTag() + "  " + temp.isDirtyNum();
+		    String spacer = "     ";
+		    result += "" + formati + spacer.substring(formati.length()-1)  + temp.isValidNum() + "  " + temp.printTag() + "  " + temp.isDirtyNum();
 		    for(int k = 0; k < blocksize; k++){
 			result += "  " + temp.getWord(k);
 		    }
